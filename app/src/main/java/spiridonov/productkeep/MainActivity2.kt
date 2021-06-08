@@ -1,7 +1,6 @@
 package spiridonov.productkeep
 
 import android.content.Intent
-import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
@@ -10,28 +9,27 @@ import android.provider.MediaStore
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import kotlinx.android.synthetic.main.activity_main.*
+import spiridonov.productkeep.R.layout.activity_main
 import java.io.File
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.math.max
+import kotlin.math.min
 
-class MainActivity : AppCompatActivity() {
-    val REQUEST_IMAGE_CAPTURE = 1
-    val REQUEST_TAKE_PHOTO = 1
+class MainActivity2 : AppCompatActivity() {
     lateinit var currentPhotoPath: String
-    lateinit var uriph: Uri
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        setContentView(activity_main)
         dispatchTakePictureIntent()
-
     }
 
     @Throws(IOException::class)
     private fun createImageFile(): File {
         // Create an image file name
         val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss").format(Date())
-        val storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+        val storageDir: File? = getExternalFilesDir(Environment.DIRECTORY_PICTURES)
         return File.createTempFile(
             "JPEG_${timeStamp}_", /* prefix */
             ".jpg", /* suffix */
@@ -39,16 +37,6 @@ class MainActivity : AppCompatActivity() {
         ).apply {
             // Save a file: path for use with ACTION_VIEW intents
             currentPhotoPath = absolutePath
-        }
-    }
-
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (data != null) {
-            //galleryAddPic()
-            //setPic(currentPhotoPath)
-            imageView.setImageURI(uriph);
         }
     }
 
@@ -71,23 +59,24 @@ class MainActivity : AppCompatActivity() {
                         "com.example.android.fileprovider",
                         it
                     )
-                    uriph = photoURI
                     takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI)
-
-                    startActivityForResult(takePictureIntent, REQUEST_TAKE_PHOTO)
+                    startActivityForResult(takePictureIntent, 1)
                 }
             }
         }
     }
+
+
     private fun galleryAddPic() {
         Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE).also { mediaScanIntent ->
             val f = File(currentPhotoPath)
             mediaScanIntent.data = Uri.fromFile(f)
-            //sendBroadcast(mediaScanIntent)
+            sendBroadcast(mediaScanIntent)
         }
     }
 
-    private fun setPic(photoPath:String) {
+
+    private fun setPic() {
         // Get the dimensions of the View
         val targetW: Int = imageView.width
         val targetH: Int = imageView.height
@@ -96,21 +85,30 @@ class MainActivity : AppCompatActivity() {
             // Get the dimensions of the bitmap
             inJustDecodeBounds = true
 
-            BitmapFactory.decodeFile(photoPath, this)
+            BitmapFactory.decodeFile(currentPhotoPath, this)
 
             val photoW: Int = outWidth
             val photoH: Int = outHeight
 
             // Determine how much to scale down the image
-            val scaleFactor: Int = Math.max(1, Math.min(photoW / targetW, photoH / targetH))
+            val scaleFactor: Int = max(1, min(photoW / targetW, photoH / targetH))
 
             // Decode the image file into a Bitmap sized to fill the View
             inJustDecodeBounds = false
             inSampleSize = scaleFactor
             inPurgeable = true
         }
-        BitmapFactory.decodeFile(photoPath, bmOptions)?.also { bitmap ->
+
+        BitmapFactory.decodeFile(currentPhotoPath, bmOptions)?.also { bitmap ->
             imageView.setImageBitmap(bitmap)
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (data != null) {
+            galleryAddPic()
+            setPic()
         }
     }
 }
